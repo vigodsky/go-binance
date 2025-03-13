@@ -377,7 +377,7 @@ type MarginBorrowRepayResponse struct {
 }
 
 type MarginBorrowRepay struct {
-	Type           string `json:"type"`           // AUTO,MANUAL for Cross Margin Borrow; MANUAL，AUTO，BNB_AUTO_REPAY，POINT_AUTO_REPAY for Cross Margin Repay; AUTO，MANUAL for Isolated Margin Borrow/Repay;
+	Type           string `json:"type"`           // AUTO,MANUAL for Cross Margin Borrow; MANUAL，AUTO，BNB_AUTO_REPAY，AUTO_BORROW_REPAY, POINT_AUTO_REPAY for Cross Margin Repay; AUTO，MANUAL for Isolated Margin Borrow/Repay;
 	IsolatedSymbol string `json:"isolatedSymbol"` // "BNBUSDT"  isolated symbol, will not be returned for crossed margin
 	Amount         string `json:"amount"`
 	Asset          string `json:"asset"`
