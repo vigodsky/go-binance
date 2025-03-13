@@ -97,7 +97,7 @@ func keepAlive(c *websocket.Conn, timeout time.Duration) {
 		err := c.WriteControl(
 			websocket.PongMessage,
 			[]byte(pingData),
-			time.Now().Add(time.Second*10), // Short deadline to ensure timely response
+			time.Now().Add(WebsocketPongTimeout), // Short deadline to ensure timely response
 		)
 		if err != nil {
 			return err
