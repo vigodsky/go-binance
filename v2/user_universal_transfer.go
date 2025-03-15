@@ -45,13 +45,13 @@ func (s *CreateUserUniversalTransferService) Amount(v string) *CreateUserUnivers
 	return s
 }
 
-// fromSymbol sets the fromSymbol parameter
+// FromSymbol sets the fromSymbol parameter
 func (s *CreateUserUniversalTransferService) FromSymbol(v string) *CreateUserUniversalTransferService {
 	s.fromSymbol = &v
 	return s
 }
 
-// toSymbol sets the toSymbol parameter
+// ToSymbol sets the toSymbol parameter
 func (s *CreateUserUniversalTransferService) ToSymbol(v string) *CreateUserUniversalTransferService {
 	s.toSymbol = &v
 	return s
