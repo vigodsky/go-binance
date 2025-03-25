@@ -31,6 +31,7 @@ Name | Description | Status
 [futures-api.md](https://binance-docs.github.io/apidocs/futures/en/#general-info) | Details on the Futures API (/fapi) | <input type="checkbox" checked>  Implemented
 [delivery-api.md](https://binance-docs.github.io/apidocs/delivery/en/#general-info) | Details on the Coin-M Futures API (/dapi) | <input type="checkbox" checked>  Implemented
 [options-api.md](https://binance-docs.github.io/apidocs/voptions/en/#general-info) | Details on the Options API(/eapi) | <input type="checkbox" checked>  Implemented
+[portfolio-margin-api.md](https://developers.binance.com/docs/derivatives/portfolio-margin/general-info) | Details on the Portfolio Margin API(/papi) | <input type="checkbox" checked>  Implemented
 
 
 If you find an unimplemented interface, please submit an issue. It's great if you can open a PR to fix it.
