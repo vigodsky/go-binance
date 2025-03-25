@@ -101,6 +101,7 @@ const (
 	OrderTypeLiquidation        OrderType = "LIQUIDATION"
 
 	TimeInForceTypeGTC    TimeInForceType = "GTC"     // Good Till Cancel
+	TimeInForceTypeGTD    TimeInForceType = "GTD"     // Good Till Date
 	TimeInForceTypeGTEGTC TimeInForceType = "GTE_GTC" // https://github.com/ccxt/go-binance/issues/681
 	TimeInForceTypeIOC    TimeInForceType = "IOC"     // Immediate or Cancel
 	TimeInForceTypeFOK    TimeInForceType = "FOK"     // Fill or Kill
