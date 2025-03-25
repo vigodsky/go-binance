@@ -56,6 +56,7 @@ func (s *cmOrderServiceTestSuite) TestCMOrder() {
 		Side(side).
 		Type(orderType).
 		Quantity(quantity).
+		NewClientOrderID("testOrder").
 		Do(newContext())
 
 	s.r().NoError(err)
