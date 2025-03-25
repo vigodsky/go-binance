@@ -48,6 +48,7 @@ func (s *cmOrderServiceTestSuite) TestCMOrder() {
 		e.setParam("side", side)
 		e.setParam("type", orderType)
 		e.setParam("quantity", quantity)
+		e.setParam("newClientOrderId", "testOrder")
 		s.assertRequestEqual(e, r)
 	})
 
