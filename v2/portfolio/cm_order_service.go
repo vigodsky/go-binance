@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+
+	"github.com/adshao/go-binance/v2/common"
 )
 
 // CMOrderService service to place CM orders
@@ -110,6 +112,8 @@ func (s *CMOrderService) Do(ctx context.Context, opts ...RequestOption) (res *CM
 	}
 	if s.newClientOrderID != nil {
 		r.setParam("newClientOrderId", *s.newClientOrderID)
+	} else {
+		r.setParam("newClientOrderId", common.GenerateSwapId())
 	}
 	if s.newOrderRespType != nil {
 		r.setParam("newOrderRespType", *s.newOrderRespType)
