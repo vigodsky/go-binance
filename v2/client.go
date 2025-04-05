@@ -930,6 +930,7 @@ func (c *Client) NewKeepaliveIsolatedMarginUserStreamService() *KeepaliveIsolate
 func (c *Client) NewCloseIsolatedMarginUserStreamService() *CloseIsolatedMarginUserStreamService {
 	return &CloseIsolatedMarginUserStreamService{c: c}
 }
+
 // NewMarginInterestHistoryService init margin interest history service
 func (c *Client) NewMarginInterestHistoryService() *MarginInterestHistoryService {
 	return &MarginInterestHistoryService{c: c}
