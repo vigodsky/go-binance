@@ -15,7 +15,7 @@ type GetBalanceService struct {
 func (s *GetBalanceService) Do(ctx context.Context, opts ...RequestOption) (res []*Balance, err error) {
 	r := &request{
 		method:   http.MethodGet,
-		endpoint: "/fapi/v2/balance",
+		endpoint: "/fapi/v3/balance",
 		secType:  secTypeSigned,
 	}
 	data, _, err := s.c.callAPI(ctx, r, opts...)
@@ -39,6 +39,8 @@ type Balance struct {
 	CrossUnPnl         string `json:"crossUnPnl"`
 	AvailableBalance   string `json:"availableBalance"`
 	MaxWithdrawAmount  string `json:"maxWithdrawAmount"`
+	MarginAvailable    bool   `json:"marginAvailable"`
+	UpdateTime         int64  `json:"updateTime"`
 }
 
 // GetAccountService get account info
