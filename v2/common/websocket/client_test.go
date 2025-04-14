@@ -57,7 +57,7 @@ func (s *clientTestSuite) TestReadWriteSync() {
 		}
 
 		return c, nil
-	}, true, 10*time.Second)
+	}, true, 2*time.Second)
 	s.Require().NoError(err)
 
 	client, err := NewClient(conn)
@@ -85,6 +85,7 @@ func (s *clientTestSuite) TestReadWriteSync() {
 				responseRaw, err := client.WriteSync(requestID, reqRaw, 5*time.Second)
 				s.Require().NoError(err)
 				s.Require().Equal(reqRaw, responseRaw)
+				time.Sleep(30 * time.Second)
 			},
 		},
 		{
@@ -197,10 +198,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	conn.SetPingHandler(func(appData string) error {
 		log.Println("Received ping:", appData)
-		err := conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
-		if err != nil {
-			log.Println("Error sending pong:", err)
-		}
+		//err := conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
+		//if err != nil {
+		//	log.Println("Error sending pong:", err)
+		//}
 		return nil
 	})
 

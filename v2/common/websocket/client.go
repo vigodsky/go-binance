@@ -72,6 +72,7 @@ func NewClient(conn Connection) (Client, error) {
 		requestsList:                NewRequestList(),
 		readErrChan:                 make(chan error, 1),
 		readC:                       make(chan []byte),
+		Debug:                       true,
 	}
 
 	go client.handleReconnect()
@@ -206,31 +207,23 @@ func (c *client) read() {
 // wait until all responses received
 // make sure that you are not sending requests
 func (c *client) wait(timeout time.Duration) {
-	doneC := make(chan struct{})
+	timeoutTimer := time.NewTimer(timeout)
+	defer timeoutTimer.Stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	const checkInterval = 300 * time.Millisecond
+	checkTicker := time.NewTicker(checkInterval)
+	defer checkTicker.Stop()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
+	for {
+		select {
+		case <-checkTicker.C:
+			if c.requestsList.Len() == 0 {
 				return
-			default:
-				if c.requestsList.Len() == 0 {
-					doneC <- struct{}{}
-					return
-				}
 			}
+		case <-timeoutTimer.C:
+			return
 		}
-	}()
-
-	t := time.After(timeout)
-	select {
-	case <-t:
-	case <-doneC:
 	}
-
-	cancel()
 }
 
 // handleReconnect waits for reconnect signal and starts reconnect
@@ -397,9 +390,12 @@ func (c *connection) RestoreConnection() (Connection, error) {
 func (c *connection) keepAlive(timeout time.Duration) {
 	ticker := time.NewTicker(timeout)
 
+	var workerID = time.Now().Nanosecond()
+
 	c.updateLastResponse()
 
 	c.conn.SetPongHandler(func(msg string) error {
+		log.Println(fmt.Sprintf("keepalive worker %d: pong received", workerID))
 		c.updateLastResponse()
 		return nil
 	})
@@ -407,14 +403,17 @@ func (c *connection) keepAlive(timeout time.Duration) {
 	go func() {
 		defer ticker.Stop()
 		for {
+			log.Println(fmt.Sprintf("keepalive worker %d: ping", workerID))
 			err := c.ping()
 			if err != nil {
 				return
 			}
 
 			<-ticker.C
+			log.Println(fmt.Sprintf("keepalive worker %d: ticker chan", workerID))
 			if c.isLastResponseOutdated(timeout) {
 				c.close()
+				log.Println(fmt.Sprintf("keepalive worker %d: pong outdated, exit", workerID))
 				return
 			}
 		}
