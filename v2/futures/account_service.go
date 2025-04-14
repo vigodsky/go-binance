@@ -12,6 +12,8 @@ type GetBalanceService struct {
 }
 
 // Do send request
+//
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/account/rest-api/Futures-Account-Balance-V3
 func (s *GetBalanceService) Do(ctx context.Context, opts ...RequestOption) (res []*Balance, err error) {
 	r := &request{
 		method:   http.MethodGet,
