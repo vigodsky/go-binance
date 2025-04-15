@@ -941,6 +941,11 @@ func (c *Client) NewMarginInterestRateHistoryService() *MarginInterestRateHistor
 	return &MarginInterestRateHistoryService{c: c}
 }
 
+// NewMarginNextHourlyInterestRateService init margin next hourly interest rate service
+func (c *Client) NewMarginNextHourlyInterestRateService() *MarginNextHourlyInterestRateService {
+	return &MarginNextHourlyInterestRateService{c: c}
+}
+
 // NewFuturesTransferService init futures transfer service
 func (c *Client) NewFuturesTransferService() *FuturesTransferService {
 	return &FuturesTransferService{c: c}
