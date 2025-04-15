@@ -46,7 +46,7 @@ func (s *accountServiceTestSuite) TestGetBalance() {
 		CrossUnPnl:         "0.00000000",
 		AvailableBalance:   "23.72469206",
 		MaxWithdrawAmount:  "23.72469206",
-		MarginAvailable:   true,
+		MarginAvailable:    true,
 		UpdateTime:         1617939110373,
 	}
 	s.assertBalanceEqual(e, res[0])
