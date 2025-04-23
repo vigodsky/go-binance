@@ -103,6 +103,7 @@ func (s *ListDualInvestmentProductService) PageIndex(pageIndex int) *ListDualInv
 	return s
 }
 
+// https://developers.binance.com/docs/dual_investment/quick-start
 func (s *ListDualInvestmentProductService) Do(ctx context.Context, opts ...RequestOption) (res *DualInvestmentProductListResponse, err error) {
 	r := &request{
 		method:   http.MethodGet,
