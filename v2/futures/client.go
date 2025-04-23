@@ -750,3 +750,8 @@ func (c *Client) NewConvertAcceptService() *ConvertAcceptService {
 func (c *Client) NewGetConvertStatusService() *ConvertStatusService {
 	return &ConvertStatusService{c: c}
 }
+
+// NewApiTradingStatusService init get api trading status service
+func (c *Client) NewApiTradingStatusService() *ApiTradingStatusService {
+	return &ApiTradingStatusService{c: c}
+}
