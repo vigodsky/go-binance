@@ -23,7 +23,9 @@ func (s *accountServiceTestSuite) TestGetBalance() {
 			"crossWalletBalance": "23.72469206",
 			"crossUnPnl": "0.00000000",
 			"availableBalance": "23.72469206",
-			"maxWithdrawAmount": "23.72469206"
+			"maxWithdrawAmount": "23.72469206",
+		    "marginAvailable": true,
+            "updateTime": 1617939110373
 		}
 	]`)
 	s.mockDo(data, nil)
@@ -44,6 +46,8 @@ func (s *accountServiceTestSuite) TestGetBalance() {
 		CrossUnPnl:         "0.00000000",
 		AvailableBalance:   "23.72469206",
 		MaxWithdrawAmount:  "23.72469206",
+		MarginAvailable:    true,
+		UpdateTime:         1617939110373,
 	}
 	s.assertBalanceEqual(e, res[0])
 }
