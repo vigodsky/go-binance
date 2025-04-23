@@ -18,6 +18,7 @@ func (service *ApiTradingStatusService) Symbol(symbol string) *ApiTradingStatusS
 }
 
 // Do send request
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/account/rest-api/Futures-Trading-Quantitative-Rules-Indicators
 func (s *ApiTradingStatusService) Do(ctx context.Context, opts ...RequestOption) (res *TradingStatusIndicators, err error) {
 	r := &request{
 		method:   http.MethodGet,
