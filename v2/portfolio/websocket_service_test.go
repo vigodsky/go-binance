@@ -52,7 +52,6 @@ func (s *websocketServiceTestSuite) assertWsServe(count ...int) {
 	s.r().Equal(e, s.serveCount)
 }
 
-
 func (s *websocketServiceTestSuite) testWsUserDataServe(data []byte, expectedEvent *WsUserDataEvent) {
 	fakeErrMsg := "fake error"
 	s.mockWsServe(data, errors.New(fakeErrMsg))
