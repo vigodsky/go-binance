@@ -486,7 +486,6 @@ type WsUserDataHandler interface {
 	HandleMarginAccountUpdate(*WsMarginAccountUpdate)
 	HandleOpenOrderLossUpdate(*WsOpenOrderLossUpdate)
 	HandleConditionalOrderTradeUpdate(*WsConditionalOrderTradeUpdate)
-	// ... existing handler methods ...
 }
 
 func wsUserDataHandler(handler WsUserDataHandler) func(message []byte) {

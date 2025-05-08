@@ -57,9 +57,13 @@ func (s *websocketServiceTestSuite) testWsUserDataServe(data []byte, expectedEve
 	s.mockWsServe(data, errors.New(fakeErrMsg))
 	defer s.assertWsServe()
 
-	doneC, stopC, err := WsUserDataServe("fakeListenKey", func(event *WsUserDataEvent) {
-		s.assertUserDataEvent(expectedEvent, event)
-	},
+	// Create a handler that implements WsUserDataHandler interface
+	handler := &testWsUserDataHandler{
+		suite:         s,
+		expectedEvent: expectedEvent,
+	}
+
+	doneC, stopC, err := WsUserDataServe("fakeListenKey", handler,
 		func(err error) {
 			s.r().EqualError(err, fakeErrMsg)
 		})
@@ -67,6 +71,60 @@ func (s *websocketServiceTestSuite) testWsUserDataServe(data []byte, expectedEve
 	s.r().NoError(err)
 	stopC <- struct{}{}
 	<-doneC
+}
+
+// testWsUserDataHandler implements WsUserDataHandler interface
+type testWsUserDataHandler struct {
+	suite         *websocketServiceTestSuite
+	expectedEvent *WsUserDataEvent
+}
+
+func (h *testWsUserDataHandler) HandleListenKeyExpired(event *WsListenKeyExpired) {
+}
+
+func (h *testWsUserDataHandler) HandleMarginBalanceUpdate(event *WsMarginBalanceUpdate) {
+}
+
+func (h *testWsUserDataHandler) HandleRiskLevelChange(event *WsRiskLevelChange) {
+	// Implement if needed
+}
+
+func (h *testWsUserDataHandler) HandleFuturesAccountConfigUpdate(event *WsFuturesAccountConfigUpdate) {
+	if h.expectedEvent.Event == "ACCOUNT_CONFIG_UPDATE" {
+		h.suite.r().Equal(h.expectedEvent.WsUserDataAccountConfigUpdate.AccountConfigUpdate, event)
+	}
+}
+
+func (h *testWsUserDataHandler) HandleFuturesAccountUpdate(event *WsFuturesAccountUpdate) {
+	if h.expectedEvent.Event == "ACCOUNT_UPDATE" {
+		h.suite.r().Equal(h.expectedEvent.WsUserDataAccountUpdate.AccountUpdate, event)
+	}
+}
+
+func (h *testWsUserDataHandler) HandleFuturesOrderUpdate(event *WsFuturesOrderUpdate) {
+	if h.expectedEvent.Event == "ORDER_TRADE_UPDATE" {
+		h.suite.r().Equal(h.expectedEvent.WsUserDataOrderTradeUpdate.OrderTradeUpdate, event)
+	}
+}
+
+func (h *testWsUserDataHandler) HandleMarginOrderUpdate(event *WsMarginOrderUpdate) {
+	// Implement if needed
+}
+
+func (h *testWsUserDataHandler) HandleLiabilityUpdate(event *WsLiabilityUpdate) {
+	// Implement if needed
+}
+
+func (h *testWsUserDataHandler) HandleMarginAccountUpdate(event *WsMarginAccountUpdate) {
+	// Implement if needed
+}
+
+func (h *testWsUserDataHandler) HandleOpenOrderLossUpdate(event *WsOpenOrderLossUpdate) {
+	// Implement if needed
+}
+
+func (h *testWsUserDataHandler) HandleConditionalOrderTradeUpdate(event *WsConditionalOrderTradeUpdate) {
+	// Implement if needed
 }
 
 func (s *websocketServiceTestSuite) TestWsUserDataServeStreamExpired() {
@@ -84,7 +142,7 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeStreamExpired() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeMarginCall() {
 	data := []byte(`{
 		"e":"MARGIN_CALL",
-		"E":1587727187525,
+		"E":"1587727187525",
 		"cw":"3.16812045",
 		"p":[
 			{
@@ -122,8 +180,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeMarginCall() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 	data := []byte(`{
 		"e": "ACCOUNT_UPDATE",
-		"E": 1564745798939,
-		"T": 1564745798938,
+		"E": "1564745798939",
+		"T": "1564745798938",
 		"a":
 		  {
 			"m":"ORDER",
@@ -313,8 +371,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeAccountConfigUpdate() {
 	data := []byte(`{
 		"e":"ACCOUNT_CONFIG_UPDATE",
-		"E":1611646737479,
-		"T":1611646737476,
+		"E":"1611646737479",
+		"T":"1611646737476",
 		"ac":{
 		"s":"BTCUSDT",
 		"l":25
@@ -337,8 +395,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountConfigUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeTradeLite() {
 	data := []byte(`{
 		"e":"TRADE_LITE",             
-		"E":1721895408092,            
-		"T":1721895408214,                                   
+		"E":"1721895408092",            
+		"T":"1721895408214",                                   
 		"s":"BTCUSDT",                
 		"q":"0.001",                  
 		"p":"0",                      
