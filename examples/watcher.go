@@ -20,9 +20,9 @@ func WatchMiniMarketsStat() {
 		fmt.Printf("%v", err)
 	}
 	c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt)
 	select {
-		case <-c:
+	case <-c:
 		stopC <- struct{}{}
 	}
 	<-doneC
