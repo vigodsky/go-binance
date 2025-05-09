@@ -130,7 +130,7 @@ func (h *testWsUserDataHandler) HandleConditionalOrderTradeUpdate(event *WsCondi
 func (s *websocketServiceTestSuite) TestWsUserDataServeStreamExpired() {
 	data := []byte(`{
 		"e": "listenKeyExpired",
-		"E": 1576653824250
+		"E": "1576653824250"
 	}`)
 	expectedEvent := &WsUserDataEvent{
 		Event: "listenKeyExpired",
@@ -291,7 +291,7 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 	data := []byte(`{
 		"e":"ORDER_TRADE_UPDATE",
-		"E":1568879465651,
+		"E":"1568879465651",
 		"T":1568879465650,
 		"o":{
 		  "s":"BTCUSDT",
