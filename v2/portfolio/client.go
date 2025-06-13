@@ -465,7 +465,7 @@ func (c *Client) NewPingService() *PingService {
 
 // --------- Account ---------
 
-// NewServerTimeService init server time service
+// NewGetBalanceService init server balance service
 func (c *Client) NewGetBalanceService() *GetBalanceService {
 	return &GetBalanceService{c: c}
 }
