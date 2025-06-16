@@ -492,6 +492,8 @@ func wsUserDataHandler(handler WsUserDataHandler) func(message []byte) {
 	return func(message []byte) {
 		var event struct {
 			EventType string `json:"e"`
+			// fix golang bug: https://github.com/golang/go/issues/14750
+			EventTime int64 `json:"E"`
 		}
 		if err := json.Unmarshal(message, &event); err != nil {
 			return
@@ -575,6 +577,8 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 	wsHandler := func(message []byte) {
 		var event struct {
 			EventType string `json:"e"`
+			// fix golang bug: https://github.com/golang/go/issues/14750
+			EventTime int64 `json:"E"`
 		}
 		if err := json.Unmarshal(message, &event); err != nil {
 			errHandler(err)
