@@ -163,16 +163,13 @@ type WsBalance struct {
 
 // WsPosition define position
 type WsPosition struct {
-	Symbol                    string           `json:"s"`
-	Side                      PositionSideType `json:"ps"`
-	Amount                    string           `json:"pa"`
-	MarginType                MarginType       `json:"mt"`
-	IsolatedWallet            string           `json:"iw"`
-	EntryPrice                string           `json:"ep"`
-	MarkPrice                 string           `json:"mp"`
-	UnrealizedPnL             string           `json:"up"`
-	AccumulatedRealized       string           `json:"cr"`
-	MaintenanceMarginRequired string           `json:"mm"`
+	Symbol              string           `json:"s"`
+	Side                PositionSideType `json:"ps"`
+	Amount              string           `json:"pa"`
+	EntryPrice          string           `json:"ep"`
+	UnrealizedPnL       string           `json:"up"`
+	AccumulatedRealized string           `json:"cr"`
+	BreakEvenPrice      float64          `json:"bep"`
 }
 
 // WsOrderTradeUpdate define order trade update
@@ -200,12 +197,7 @@ type WsOrderTradeUpdate struct {
 	AsksNotional         string             `json:"a"`   // Asks Notional
 	IsMaker              bool               `json:"m"`   // Is this trade the maker side?
 	IsReduceOnly         bool               `json:"R"`   // Is this reduce only
-	WorkingType          WorkingType        `json:"wt"`  // Stop Price Working Type
-	OriginalType         OrderType          `json:"ot"`  // Original Order Type
 	PositionSide         PositionSideType   `json:"ps"`  // Position Side
-	IsClosingPosition    bool               `json:"cp"`  // If Close-All, pushed with conditional order
-	ActivationPrice      string             `json:"AP"`  // Activation Price, only puhed with TRAILING_STOP_MARKET order
-	CallbackRate         string             `json:"cr"`  // Callback Rate, only puhed with TRAILING_STOP_MARKET order
 	PriceProtect         bool               `json:"pP"`  // If price protection is turned on
 	RealizedPnL          string             `json:"rp"`  // Realized Profit of the trade
 	STP                  string             `json:"V"`   // STP mode
@@ -344,35 +336,35 @@ type WsFuturesOrderUpdate struct {
 }
 
 type WsFuturesOrderData struct {
-	Symbol          string `json:"s"`
-	ClientOrderID   string `json:"c"`
-	Side            string `json:"S"`
-	OrderType       string `json:"o"`
-	TimeInForce     string `json:"f"`
-	OriginalQty     string `json:"q"`
-	OriginalPrice   string `json:"p"`
-	AveragePrice    string `json:"ap"`
-	StopPrice       string `json:"sp"`
-	ExecutionType   string `json:"x"`
-	OrderStatus     string `json:"X"`
-	OrderID         int64  `json:"i"`
-	LastFilledQty   string `json:"l"`
-	FilledAccumQty  string `json:"z"`
-	LastFilledPrice string `json:"L"`
-	CommissionAsset string `json:"N"`
-	Commission      string `json:"n"`
-	TradeTime       int64  `json:"T"`
-	TradeID         int64  `json:"t"`
-	BidsNotional    string `json:"b"`
-	AskNotional     string `json:"a"`
-	IsMaker         bool   `json:"m"`
-	IsReduceOnly    bool   `json:"R"`
-	PositionSide    string `json:"ps"`
-	RealizedProfit  string `json:"rp"`
-	StrategyType    string `json:"st"`
-	StrategyID      int64  `json:"si"`
-	STPMode         string `json:"V"`
-	GTD             int64  `json:"gtd"`
+	Symbol          string             `json:"s"`
+	ClientOrderID   string             `json:"c"`
+	Side            SideType           `json:"S"`
+	OrderType       OrderType          `json:"o"`
+	TimeInForce     TimeInForceType    `json:"f"`
+	OriginalQty     string             `json:"q"`
+	OriginalPrice   string             `json:"p"`
+	AveragePrice    string             `json:"ap"`
+	StopPrice       string             `json:"sp"`
+	ExecutionType   OrderExecutionType `json:"x"`
+	OrderStatus     OrderStatusType    `json:"X"`
+	OrderID         int64              `json:"i"`
+	LastFilledQty   string             `json:"l"`
+	FilledAccumQty  string             `json:"z"`
+	LastFilledPrice string             `json:"L"`
+	CommissionAsset string             `json:"N"`
+	Commission      string             `json:"n"`
+	TradeTime       int64              `json:"T"`
+	TradeID         int64              `json:"t"`
+	BidsNotional    string             `json:"b"`
+	AskNotional     string             `json:"a"`
+	IsMaker         bool               `json:"m"`
+	IsReduceOnly    bool               `json:"R"`
+	PositionSide    PositionSideType   `json:"ps"`
+	RealizedProfit  string             `json:"rp"`
+	StrategyType    string             `json:"st"`
+	StrategyID      int64              `json:"si"`
+	STPMode         string             `json:"V"`
+	GTD             int64              `json:"gtd"`
 }
 
 // WsFuturesAccountUpdate represents a futures account update event
@@ -397,13 +389,13 @@ type WsFuturesBalance struct {
 }
 
 type WsFuturesPosition struct {
-	Symbol              string `json:"s"`
-	PositionAmount      string `json:"pa"`
-	EntryPrice          string `json:"ep"`
-	AccumulatedRealized string `json:"cr"`
-	UnrealizedPnL       string `json:"up"`
-	PositionSide        string `json:"ps"`
-	BreakEvenPrice      string `json:"bep"`
+	Symbol              string           `json:"s"`
+	PositionAmount      string           `json:"pa"`
+	EntryPrice          string           `json:"ep"`
+	AccumulatedRealized string           `json:"cr"`
+	UnrealizedPnL       string           `json:"up"`
+	PositionSide        PositionSideType `json:"ps"`
+	BreakEvenPrice      string           `json:"bep"`
 }
 
 // WsFuturesAccountConfigUpdate represents a futures account configuration update event
@@ -582,18 +574,6 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 		}
 		if err := json.Unmarshal(message, &event); err != nil {
 			errHandler(err)
-			return
-		}
-
-		// If listen key expired, notify handler and close connection
-		if event.EventType == "listenKeyExpired" {
-			var expiredEvent WsListenKeyExpired
-			if err := json.Unmarshal(message, &expiredEvent); err != nil {
-				errHandler(err)
-				return
-			}
-			handler.HandleListenKeyExpired(&expiredEvent)
-			close(stopC) // Signal to close the connection
 			return
 		}
 
