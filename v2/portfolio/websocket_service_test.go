@@ -91,19 +91,19 @@ func (h *testWsUserDataHandler) HandleRiskLevelChange(event *WsRiskLevelChange) 
 
 func (h *testWsUserDataHandler) HandleFuturesAccountConfigUpdate(event *WsFuturesAccountConfigUpdate) {
 	if h.expectedEvent.Event == "ACCOUNT_CONFIG_UPDATE" {
-		h.suite.r().Equal(h.expectedEvent.WsUserDataAccountConfigUpdate.AccountConfigUpdate, event)
+		h.suite.assertAccountConfigUpdate(h.expectedEvent.WsUserDataAccountConfigUpdate.AccountConfigUpdate, event.AccountConfig)
 	}
 }
 
 func (h *testWsUserDataHandler) HandleFuturesAccountUpdate(event *WsFuturesAccountUpdate) {
 	if h.expectedEvent.Event == "ACCOUNT_UPDATE" {
-		h.suite.r().Equal(h.expectedEvent.WsUserDataAccountUpdate.AccountUpdate, event)
+		h.suite.assertAccountUpdate(h.expectedEvent.WsUserDataAccountUpdate.AccountUpdate, *event)
 	}
 }
 
 func (h *testWsUserDataHandler) HandleFuturesOrderUpdate(event *WsFuturesOrderUpdate) {
 	if h.expectedEvent.Event == "ORDER_TRADE_UPDATE" {
-		h.suite.r().Equal(h.expectedEvent.WsUserDataOrderTradeUpdate.OrderTradeUpdate, event)
+		h.suite.assertOrderTradeUpdate(h.expectedEvent.WsUserDataOrderTradeUpdate.OrderTradeUpdate, event.Order)
 	}
 }
 
@@ -130,7 +130,7 @@ func (h *testWsUserDataHandler) HandleConditionalOrderTradeUpdate(event *WsCondi
 func (s *websocketServiceTestSuite) TestWsUserDataServeStreamExpired() {
 	data := []byte(`{
 		"e": "listenKeyExpired",
-		"E": "1576653824250"
+		"E": 1576653824250
 	}`)
 	expectedEvent := &WsUserDataEvent{
 		Event: "listenKeyExpired",
@@ -142,18 +142,17 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeStreamExpired() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeMarginCall() {
 	data := []byte(`{
 		"e":"MARGIN_CALL",
-		"E":"1587727187525",
+		"E":1587727187525,
 		"cw":"3.16812045",
 		"p":[
 			{
 				"s":"ETHUSDT",
 				"ps":"LONG",
+				"ep":"187.17127",
+				"cr":"0",
 				"pa":"1.327",
-				"mt":"CROSSED",
-				"iw":"0",
-				"mp":"187.17127",
 				"up":"-1.166074",
-				"mm":"1.614445"
+				"bep":152.909412
 			}
 		]
 	}`)
@@ -163,14 +162,13 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeMarginCall() {
 		WsUserDataMarginCall: WsUserDataMarginCall{CrossWalletBalance: "3.16812045",
 			MarginCallPositions: []WsPosition{
 				{
-					Symbol:                    "ETHUSDT",
-					Side:                      "LONG",
-					Amount:                    "1.327",
-					MarginType:                "CROSSED",
-					IsolatedWallet:            "0",
-					MarkPrice:                 "187.17127",
-					UnrealizedPnL:             "-1.166074",
-					MaintenanceMarginRequired: "1.614445",
+					Symbol:              "ETHUSDT",
+					Side:                "LONG",
+					EntryPrice:          "187.17127",
+					AccumulatedRealized: "0",
+					Amount:              "1.327",
+					UnrealizedPnL:       "-1.166074",
+					BreakEvenPrice:      152.909412,
 				},
 			}},
 	}
@@ -180,8 +178,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeMarginCall() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 	data := []byte(`{
 		"e": "ACCOUNT_UPDATE",
-		"E": "1564745798939",
-		"T": "1564745798938",
+		"E": 1564745798939,
+		"T": 1564745798938,
 		"a":
 		  {
 			"m":"ORDER",
@@ -257,8 +255,6 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 						EntryPrice:          "0.00000",
 						AccumulatedRealized: "200",
 						UnrealizedPnL:       "0",
-						MarginType:          "isolated",
-						IsolatedWallet:      "0.00000000",
 						Side:                "BOTH",
 					},
 					{
@@ -267,8 +263,6 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 						EntryPrice:          "6563.66500",
 						AccumulatedRealized: "0",
 						UnrealizedPnL:       "2850.21200",
-						MarginType:          "isolated",
-						IsolatedWallet:      "13200.70726908",
 						Side:                "LONG",
 					},
 					{
@@ -277,8 +271,6 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 						EntryPrice:          "6563.86000",
 						AccumulatedRealized: "-45.04000000",
 						UnrealizedPnL:       "-1423.15600",
-						MarginType:          "isolated",
-						IsolatedWallet:      "6570.42511771",
 						Side:                "SHORT",
 					},
 				},
@@ -291,7 +283,7 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 	data := []byte(`{
 		"e":"ORDER_TRADE_UPDATE",
-		"E":"1568879465651",
+		"E":1568879465651,
 		"T":1568879465650,
 		"o":{
 		  "s":"BTCUSDT",
@@ -321,7 +313,6 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 		  "ot":"TRAILING_STOP_MARKET",
 		  "ps":"LONG",
 		  "cp":false,
-		  "AP":"7476.89",
 		  "cr":"5.0",
 		  "rp":"0"
 		}
@@ -355,12 +346,7 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 				AsksNotional:         "9.91",
 				IsMaker:              false,
 				IsReduceOnly:         false,
-				WorkingType:          "CONTRACT_PRICE",
-				OriginalType:         "TRAILING_STOP_MARKET",
 				PositionSide:         "LONG",
-				IsClosingPosition:    false,
-				ActivationPrice:      "7476.89",
-				CallbackRate:         "5.0",
 				RealizedPnL:          "0",
 			},
 		},
@@ -371,8 +357,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderTradeUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeAccountConfigUpdate() {
 	data := []byte(`{
 		"e":"ACCOUNT_CONFIG_UPDATE",
-		"E":"1611646737479",
-		"T":"1611646737476",
+		"E":1611646737479,
+		"T":1611646737476,
 		"ac":{
 		"s":"BTCUSDT",
 		"l":25
@@ -395,8 +381,8 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeAccountConfigUpdate() {
 func (s *websocketServiceTestSuite) TestWsUserDataServeTradeLite() {
 	data := []byte(`{
 		"e":"TRADE_LITE",             
-		"E":"1721895408092",            
-		"T":"1721895408214",                                   
+		"E":1721895408092,            
+		"T":1721895408214,                                   
 		"s":"BTCUSDT",                
 		"q":"0.001",                  
 		"p":"0",                      
@@ -430,22 +416,6 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeTradeLite() {
 	s.testWsUserDataServe(data, expectedEvent)
 }
 
-func (s *websocketServiceTestSuite) assertUserDataEvent(e, a *WsUserDataEvent) {
-	r := s.r()
-	r.Equal(e.Event, a.Event, "Event")
-	r.Equal(e.Time, a.Time, "Time")
-	r.Equal(e.CrossWalletBalance, a.CrossWalletBalance, "CrossWalletBalance")
-	for i, e := range e.MarginCallPositions {
-		a := a.MarginCallPositions[i]
-		s.assertPosition(e, a)
-	}
-	r.Equal(e.TransactionTime, a.TransactionTime, "TransactionTime")
-	s.assertAccountUpdate(e.AccountUpdate, a.AccountUpdate)
-	s.assertOrderTradeUpdate(e.OrderTradeUpdate, a.OrderTradeUpdate)
-	s.assertAccountConfigUpdate(e.AccountConfigUpdate, a.AccountConfigUpdate)
-	s.assertTradeLite(e.WsUserDataTradeLite, a.WsUserDataTradeLite)
-}
-
 func (s *websocketServiceTestSuite) assertTradeLite(e, a WsUserDataTradeLite) {
 	r := s.r()
 	r.Equal(e.Symbol, a.Symbol, "Symbol")
@@ -460,67 +430,57 @@ func (s *websocketServiceTestSuite) assertTradeLite(e, a WsUserDataTradeLite) {
 	r.Equal(e.OrderID, a.OrderID, "OrderID")
 }
 
-func (s *websocketServiceTestSuite) assertPosition(e, a WsPosition) {
+func (s *websocketServiceTestSuite) assertPosition(e WsPosition, a WsFuturesPosition) {
 	r := s.r()
 	r.Equal(e.Symbol, a.Symbol, "Symbol")
-	r.Equal(e.Side, a.Side, "Side")
-	r.Equal(e.Amount, a.Amount, "Amount")
-	r.Equal(e.MarginType, a.MarginType, "MarginType")
-	r.Equal(e.IsolatedWallet, a.IsolatedWallet, "IsolatedWallet")
+	r.Equal(e.Side, a.PositionSide, "Side")
+	r.Equal(e.Amount, a.PositionAmount, "Amount")
 	r.Equal(e.EntryPrice, a.EntryPrice, "EntryPrice")
-	r.Equal(e.MarkPrice, a.MarkPrice, "MarkPrice")
 	r.Equal(e.UnrealizedPnL, a.UnrealizedPnL, "UnrealizedPnL")
 	r.Equal(e.AccumulatedRealized, a.AccumulatedRealized, "AccumulatedRealized")
-	r.Equal(e.MaintenanceMarginRequired, a.MaintenanceMarginRequired, "MaintenanceMarginRequired")
 }
 
-func (s *websocketServiceTestSuite) assertAccountUpdate(e, a WsAccountUpdate) {
+func (s *websocketServiceTestSuite) assertAccountUpdate(e WsAccountUpdate, a WsFuturesAccountUpdate) {
 	r := s.r()
-	r.Equal(e.Reason, a.Reason, "Reason")
+	r.Equal(e.Reason, UserDataEventReasonType(a.AccountData.ReasonType), "Reason")
 	for i, e := range e.Balances {
-		a := a.Balances[i]
+		a := a.AccountData.Balances[i]
 		r.Equal(e.Asset, a.Asset, "Asset")
-		r.Equal(e.Balance, a.Balance, "Balance")
+		r.Equal(e.Balance, a.WalletBalance, "Balance")
 		r.Equal(e.CrossWalletBalance, a.CrossWalletBalance, "CrossWalletBalance")
 	}
 	for i, e := range e.Positions {
-		a := a.Positions[i]
+		a := a.AccountData.Positions[i]
 		s.assertPosition(e, a)
 	}
 }
 
-func (s *websocketServiceTestSuite) assertOrderTradeUpdate(e, a WsOrderTradeUpdate) {
+func (s *websocketServiceTestSuite) assertOrderTradeUpdate(e WsOrderTradeUpdate, a WsFuturesOrderData) {
 	r := s.r()
 	r.Equal(e.Symbol, a.Symbol, "Symbol")
 	r.Equal(e.ClientOrderID, a.ClientOrderID, "ClientOrderID")
 	r.Equal(e.Side, a.Side, "Side")
-	r.Equal(e.Type, a.Type, "Type")
+	r.Equal(e.Type, a.OrderType, "Type")
 	r.Equal(e.TimeInForce, a.TimeInForce, "TimeInForce")
 	r.Equal(e.OriginalQty, a.OriginalQty, "OriginalQty")
 	r.Equal(e.OriginalPrice, a.OriginalPrice, "OriginalPrice")
 	r.Equal(e.AveragePrice, a.AveragePrice, "AveragePrice")
 	r.Equal(e.StopPrice, a.StopPrice, "StopPrice")
 	r.Equal(e.ExecutionType, a.ExecutionType, "ExecutionType")
-	r.Equal(e.Status, a.Status, "Status")
-	r.Equal(e.ID, a.ID, "ID")
+	r.Equal(e.Status, a.OrderStatus, "Status")
+	r.Equal(e.ID, a.OrderID, "ID")
 	r.Equal(e.LastFilledQty, a.LastFilledQty, "LastFilledQty")
-	r.Equal(e.AccumulatedFilledQty, a.AccumulatedFilledQty, "AccumulatedFilledQty")
+	r.Equal(e.AccumulatedFilledQty, a.FilledAccumQty, "AccumulatedFilledQty")
 	r.Equal(e.LastFilledPrice, a.LastFilledPrice, "LastFilledPrice")
 	r.Equal(e.CommissionAsset, a.CommissionAsset, "CommissionAsset")
 	r.Equal(e.Commission, a.Commission, "Commission")
 	r.Equal(e.TradeTime, a.TradeTime, "TradeTime")
 	r.Equal(e.TradeID, a.TradeID, "TradeID")
 	r.Equal(e.BidsNotional, a.BidsNotional, "BidsNotional")
-	r.Equal(e.AsksNotional, a.AsksNotional, "AsksNotional")
+	r.Equal(e.AsksNotional, a.AskNotional, "AsksNotional")
 	r.Equal(e.IsMaker, a.IsMaker, "IsMaker")
 	r.Equal(e.IsReduceOnly, a.IsReduceOnly, "IsReduceOnly")
-	r.Equal(e.WorkingType, a.WorkingType, "WorkingType")
-	r.Equal(e.OriginalType, a.OriginalType, "OriginalType")
 	r.Equal(e.PositionSide, a.PositionSide, "PositionSide")
-	r.Equal(e.IsClosingPosition, a.IsClosingPosition, "IsClosingPosition")
-	r.Equal(e.ActivationPrice, a.ActivationPrice, "ActivationPrice")
-	r.Equal(e.CallbackRate, a.CallbackRate, "CallbackRate")
-	r.Equal(e.RealizedPnL, a.RealizedPnL, "RealizedPnL")
 }
 
 func (s *websocketServiceTestSuite) assertAccountConfigUpdate(e, a WsAccountConfigUpdate) {
