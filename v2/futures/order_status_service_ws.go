@@ -40,8 +40,8 @@ func NewOrderStatusWsService(apiKey, secretKey string) (*OrderStatusWsService, e
 // OrderStatusWsRequest parameters for 'order.status' websocket API
 type OrderStatusWsRequest struct {
 	symbol            string
-	orderId           int64
-	origClientOrderId string
+	orderID           int64
+	origClientOrderID string
 	timestamp         int64
 }
 
@@ -56,15 +56,15 @@ func (s *OrderStatusWsRequest) Symbol(symbol string) *OrderStatusWsRequest {
 	return s
 }
 
-// OrderId set orderId
-func (s *OrderStatusWsRequest) OrderId(orderId int64) *OrderStatusWsRequest {
-	s.orderId = orderId
+// OrderID set orderID
+func (s *OrderStatusWsRequest) OrderID(orderID int64) *OrderStatusWsRequest {
+	s.orderID = orderID
 	return s
 }
 
-// OrigClientOrderID set origClientOrderId
+// OrigClientOrderID set origClientOrderID
 func (s *OrderStatusWsRequest) OrigClientOrderID(origClientOrderID string) *OrderStatusWsRequest {
-	s.origClientOrderId = origClientOrderID
+	s.origClientOrderID = origClientOrderID
 	return s
 }
 
@@ -118,10 +118,10 @@ func (r *OrderStatusWsRequest) GetParams() map[string]interface{} {
 func (s *OrderStatusWsRequest) buildParams() params {
 	m := params{
 		"symbol":  s.symbol,
-		"orderId": s.orderId,
+		"orderId": s.orderID,
 	}
-	if s.origClientOrderId != "" {
-		m["origClientOrderId"] = s.origClientOrderId
+	if s.origClientOrderID != "" {
+		m["origClientOrderId"] = s.origClientOrderID
 	}
 
 	return m

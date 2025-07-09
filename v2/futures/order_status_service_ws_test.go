@@ -20,7 +20,7 @@ func (s *orderStatusServiceWsTestSuite) SetupTest() {
 	s.requestID = "e2a85d9f-07a5-4f94-8d5f-789dc3deb098"
 
 	s.symbol = "BTCUSDT"
-	s.orderId = int64(123456)
+	s.orderID = int64(123456)
 	s.origClientOrderID = "testOrder"
 
 	s.ctrl = gomock.NewController(s.T())
@@ -35,7 +35,7 @@ func (s *orderStatusServiceWsTestSuite) SetupTest() {
 
 	s.orderStatusRequest = NewOrderStatusWsRequest().
 		Symbol(s.symbol).
-		OrderId(s.orderId).
+		OrderID(s.orderID).
 		OrigClientOrderID(s.origClientOrderID)
 }
 
@@ -55,7 +55,7 @@ type orderStatusServiceWsTestSuite struct {
 
 	requestID         string
 	symbol            string
-	orderId           int64
+	orderID           int64
 	origClientOrderID string
 
 	orderStatus        *OrderStatusWsService
@@ -120,7 +120,7 @@ func (s *orderStatusServiceWsTestSuite) TestOrderStatusSync() {
 		Result: QueryOrderResult{
 			QueryOrderResponse{
 				Symbol:        s.symbol,
-				OrderID:       s.orderId,
+				OrderID:       s.orderID,
 				ClientOrderID: s.origClientOrderID,
 			},
 		},
@@ -135,8 +135,8 @@ func (s *orderStatusServiceWsTestSuite) TestOrderStatusSync() {
 	response, err := s.orderStatus.SyncDo(s.requestID, req)
 	s.Require().NoError(err)
 	s.Equal(req.symbol, response.Result.Symbol)
-	s.Equal(req.orderId, response.Result.OrderID)
-	s.Equal(req.origClientOrderId, response.Result.ClientOrderID)
+	s.Equal(req.orderID, response.Result.OrderID)
+	s.Equal(req.origClientOrderID, response.Result.ClientOrderID)
 }
 
 func (s *orderStatusServiceWsTestSuite) TestOrderStatusSync_EmptyRequestID() {
