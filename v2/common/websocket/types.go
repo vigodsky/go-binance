@@ -47,6 +47,9 @@ const (
 
 	// CancelFuturesWsApiMethod define method for cancel order via websocket API
 	CancelFuturesWsApiMethod WsApiMethodType = "order.cancel"
+
+	// OrderStatusFuturesWsApiMethod define method for query order via websocket API
+	OrderStatusFuturesWsApiMethod WsApiMethodType = "order.status"
 )
 
 var (
