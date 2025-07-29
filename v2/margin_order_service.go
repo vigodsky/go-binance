@@ -499,29 +499,48 @@ type CancelMarginOrderResponse struct {
 
 // CancelAllMarginOrdersResponse define response of canceling order
 type CancelAllMarginOrdersResponse struct {
-	Symbol                   string                  `json:"symbol"`
-	OrigClientOrderID        string                  `json:"origClientOrderId"`
-	OrderID                  string                  `json:"orderId"`
-	ClientOrderID            string                  `json:"clientOrderId"`
-	TransactTime             int64                   `json:"transactTime"`
-	Price                    string                  `json:"price"`
-	OrigQuantity             string                  `json:"origQty"`
-	ExecutedQuantity         string                  `json:"executedQty"`
-	CummulativeQuoteQuantity string                  `json:"cummulativeQuoteQty"`
-	Status                   OrderStatusType         `json:"status"`
-	TimeInForce              TimeInForceType         `json:"timeInForce"`
-	Type                     OrderType               `json:"type"`
-	Side                     SideType                `json:"side"`
-	SelfTradePreventionMode  string                  `json:"selfTradePreventionMode"`
-	OrderListID              int64                   `json:"orderListId"`
-	ContingencyType          string                  `json:"contingencyType"`
-	ListStatusType           string                  `json:"listStatusType"`
-	ListOrderStatus          string                  `json:"listOrderStatus"`
-	ListClientOrderID        string                  `json:"listClientOrderId"`
-	TransactionTime          int64                   `json:"transactionTime"`
-	IsIsolated               bool                    `json:"isIsolated"`
-	Orders                   []*MarginOCOOrder       `json:"orders"`
-	OrderReports             []*MarginOCOOrderReport `json:"orderReports"`
+	Symbol                   string                         `json:"symbol"`
+	OrigClientOrderID        string                         `json:"origClientOrderId"`
+	OrderID                  string                         `json:"orderId"`
+	ClientOrderID            string                         `json:"clientOrderId"`
+	TransactTime             int64                          `json:"transactTime"`
+	Price                    string                         `json:"price"`
+	OrigQuantity             string                         `json:"origQty"`
+	ExecutedQuantity         string                         `json:"executedQty"`
+	CummulativeQuoteQuantity string                         `json:"cummulativeQuoteQty"`
+	Status                   OrderStatusType                `json:"status"`
+	TimeInForce              TimeInForceType                `json:"timeInForce"`
+	Type                     OrderType                      `json:"type"`
+	Side                     SideType                       `json:"side"`
+	SelfTradePreventionMode  string                         `json:"selfTradePreventionMode"`
+	OrderListID              int64                          `json:"orderListId"`
+	ContingencyType          string                         `json:"contingencyType"`
+	ListStatusType           string                         `json:"listStatusType"`
+	ListOrderStatus          string                         `json:"listOrderStatus"`
+	ListClientOrderID        string                         `json:"listClientOrderId"`
+	TransactionTime          int64                          `json:"transactionTime"`
+	IsIsolated               bool                           `json:"isIsolated"`
+	Orders                   []*MarginOCOOrder              `json:"orders"`
+	OrderReports             []*CancelAllMarginOrdersReport `json:"orderReports"`
+}
+
+// CancelAllMarginOrdersReport may be returned in an array of MarginOCOOrderReport in a CreateMarginOCOResponse
+type CancelAllMarginOrdersReport struct {
+	Symbol                   string          `json:"symbol"`
+	OrderID                  int64           `json:"orderId"`
+	OrderListID              int64           `json:"orderListId"`
+	ClientOrderID            string          `json:"clientOrderId"`
+	OrigClientOrderID        string          `json:"origClientOrderId"`
+	Price                    string          `json:"price"`
+	OrigQuantity             string          `json:"origQty"`
+	ExecutedQuantity         string          `json:"executedQty"`
+	CummulativeQuoteQuantity string          `json:"cummulativeQuoteQty"`
+	Status                   OrderStatusType `json:"status"`
+	TimeInForce              TimeInForceType `json:"timeInForce"`
+	Type                     OrderType       `json:"type"`
+	Side                     SideType        `json:"side"`
+	StopPrice                string          `json:"stopPrice"`
+	IcebergQty               string          `json:"icebergQty"`
 }
 
 // CreateMarginOCOService create a new OCO for a margin account
