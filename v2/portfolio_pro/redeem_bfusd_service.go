@@ -54,6 +54,9 @@ func (s *RedeemBFUSDService) Do(ctx context.Context, opts ...RequestOption) (*Re
 // Example:
 // {"fromAssetQty":"10","targetAssetQty":"9.9983733","redeemRate":"0.99983733","fromAsset":"BFUSD","targetAsset":"USDC"}
 type RedeemBFUSDResponse struct {
-	BFUSDResponse
-	RedeemRate string `json:"redeemRate"`
+	FromAsset      string `json:"fromAsset"`
+	TargetAsset    string `json:"targetAsset"`
+	FromAssetQty   string `json:"fromAssetQty"`
+	TargetAssetQty string `json:"targetAssetQty"`
+	RedeemRate     string `json:"redeemRate"`
 }

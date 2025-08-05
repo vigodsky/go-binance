@@ -53,13 +53,9 @@ func (s *MintBFUSDService) Do(ctx context.Context, opts ...RequestOption) (*Mint
 // Example:
 // {"fromAssetQty":"10","targetAssetQty":"9.9966156","mintRate":"0.99966156","fromAsset":"USDC","targetAsset":"BFUSD"}
 type MintBFUSDResponse struct {
-	BFUSDResponse
-	MintRate string `json:"mintRate"`
-}
-
-type BFUSDResponse struct {
 	FromAsset      string `json:"fromAsset"`
 	TargetAsset    string `json:"targetAsset"`
 	FromAssetQty   string `json:"fromAssetQty"`
 	TargetAssetQty string `json:"targetAssetQty"`
+	MintRate       string `json:"mintRate"`
 }
