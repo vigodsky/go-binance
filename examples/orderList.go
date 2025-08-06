@@ -278,7 +278,7 @@ func SorOrderPlace() {
 	}
 
 	fmt.Printf("SOR Order Response: %+v\n", response)
-	
+
 	// Check if result array is not empty before accessing
 	if len(response.Result) > 0 {
 		fmt.Printf("Used SOR: %v\n", response.Result[0].UsedSor)
@@ -348,7 +348,6 @@ func RunOrderListExamples() {
 	fmt.Println("\n3. OTOCO Order")
 	OrderListPlaceOTOCO()
 	time.Sleep(2 * time.Second)
-
 
 	fmt.Println("\n4. Cancel Order List")
 	// OrderListCancel() // Uncomment and provide valid order list ID

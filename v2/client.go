@@ -1509,4 +1509,3 @@ func (c *Client) NewSorOrderPlaceWsService() (*SorOrderPlaceWsService, error) {
 func (c *Client) NewSorOrderTestWsService() (*SorOrderTestWsService, error) {
 	return NewSorOrderTestWsService(c.APIKey, c.SecretKey)
 }
-
