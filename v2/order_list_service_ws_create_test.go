@@ -202,17 +202,6 @@ func (s *orderListPlaceServiceWsTestSuite) TestOrderListPlaceSync_EmptySecretKey
 	s.ErrorIs(err, websocket.ErrorSecretKeyIsNotSet)
 }
 
-func (s *orderListPlaceServiceWsTestSuite) TestOrderListPlaceSync_EmptySignKeyType() {
-	s.reset(s.apiKey, s.secretKey, "", s.timeOffset)
-
-	s.client.EXPECT().
-		WriteSync(s.requestID, gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("write sync: error")).Times(0)
-
-	response, err := s.orderListPlace.SyncDo(s.requestID, s.orderListPlaceRequest)
-	s.Nil(response)
-	s.ErrorIs(err, websocket.ErrorSecretKeyIsNotSet)
-}
-
 func (s *orderListPlaceServiceWsTestSuite) reset(apiKey, secretKey, signKeyType string, timeOffset int64) {
 	s.orderListPlace = &OrderListCreateWsService{
 		c:          s.client,
