@@ -614,9 +614,6 @@ func (s *websocketServiceTestSuite) TestWsCombinedKlineServeMultiInterval() {
 	<-doneC
 }
 
-
-
-
 func (s *websocketServiceTestSuite) TestContinuousKlineServe() {
 	data := []byte(`{
 		"e": "continuous_kline",
