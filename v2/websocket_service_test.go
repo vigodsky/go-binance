@@ -747,8 +747,6 @@ func (s *websocketServiceTestSuite) TestWsCombinedKlineServeMultiInterval() {
 	<-doneC
 }
 
-
-
 func (s *websocketServiceTestSuite) TestWsCombinedAggTradeServe() {
 	data := []byte(`{
 	"stream":"ethbtc@aggTrade",
