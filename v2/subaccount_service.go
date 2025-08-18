@@ -334,6 +334,7 @@ type SubAccountList struct {
 type SubAccount struct {
 	SubUserID                   string `json:"subUserId"`
 	Email                       string `json:"email"`
+	Remark                      string `json:"remark"`
 	IsFreeze                    bool   `json:"isFreeze"`
 	CreateTime                  uint64 `json:"createTime"`
 	IsManagedSubAccount         bool   `json:"isManagedSubAccount"`
