@@ -76,8 +76,8 @@ func (s *tickerServiceTestSuite) TestSingleBookTicker() {
             "bidQty": "431.00000000",
             "askPrice": "4.00000200",
             "askQty": "9.00000000",
-			"time":1757119264167,
-			"lastUpdateId":8524099887582
+            "time":1757119264167,
+            "lastUpdateId":8524099887582
         }`)
 	s.mockDo(data, nil)
 	defer s.assertDo()
