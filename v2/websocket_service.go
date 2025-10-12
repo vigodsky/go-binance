@@ -700,13 +700,7 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 	doneC = make(chan struct{})
 	stopC = make(chan struct{})
 
-	conn, err := websocket.NewConnection(
-		func() (*gorilla.Conn, error) {
-			return WsGetReadWriteConnection(cfg)
-		},
-		WebsocketKeepalive,
-		WebsocketTimeoutReadWriteConnection,
-	)
+	conn, err := WsGetReadWriteConnection(cfg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -768,7 +762,6 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 				}
 				continue
 			}
-			fmt.Println(j)
 
 			// Skip subscription confirmation messages
 			if j.Get("id").MustString() != "" && j.Get("status").MustInt() == 200 {
@@ -813,7 +806,6 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 				}
 				continue
 			}
-			fmt.Println(event)
 
 			// Determine event type from payload
 			jj, _ := newJSON(payload)
