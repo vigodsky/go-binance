@@ -734,33 +734,28 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 		defer close(doneC)
 		defer conn.Close()
 
-		// Wait for the stopC channel to be closed
-		silent := false
-		go func() {
-			select {
-			case <-stopC:
-				silent = true
-			case <-doneC:
-			}
-			conn.Close()
-		}()
-
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				if !silent {
+				select {
+				case <-stopC:
+					return
+				default:
 					errHandler(err)
+					return
 				}
-				return
 			}
 
 			// Check if this is a subscription response
 			j, err := newJSON(message)
 			if err != nil {
-				if !silent {
+				select {
+				case <-stopC:
+					continue
+				default:
 					errHandler(err)
+					continue
 				}
-				continue
 			}
 
 			// Skip subscription confirmation messages
@@ -801,10 +796,13 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 			// Parse user data event from the resolved payload
 			event := new(WsUserDataEvent)
 			if err = json.Unmarshal(payload, event); err != nil {
-				if !silent {
+				select {
+				case <-stopC:
+					continue
+				default:
 					errHandler(err)
+					continue
 				}
-				continue
 			}
 
 			// Determine event type from payload
@@ -817,31 +815,43 @@ func WsUserDataServeSignature(apiKey, secretKey string, keyType string, timeOffs
 			switch evtType {
 			case UserDataEventTypeOutboundAccountPosition:
 				if err = json.Unmarshal(payload, &event.AccountUpdate); err != nil {
-					if !silent {
+					select {
+					case <-stopC:
+						continue
+					default:
 						errHandler(err)
+						continue
 					}
-					continue
 				}
 			case UserDataEventTypeBalanceUpdate:
 				if err = json.Unmarshal(payload, &event.BalanceUpdate); err != nil {
-					if !silent {
+					select {
+					case <-stopC:
+						continue
+					default:
 						errHandler(err)
+						continue
 					}
-					continue
 				}
 			case UserDataEventTypeExecutionReport:
 				if err = json.Unmarshal(payload, &event.OrderUpdate); err != nil {
-					if !silent {
+					select {
+					case <-stopC:
+						continue
+					default:
 						errHandler(err)
+						continue
 					}
-					continue
 				}
 			case UserDataEventTypeListStatus:
 				if err = json.Unmarshal(payload, &event.OCOUpdate); err != nil {
-					if !silent {
+					select {
+					case <-stopC:
+						continue
+					default:
 						errHandler(err)
+						continue
 					}
-					continue
 				}
 			default:
 				// Unknown event; still forward to handler so callers can log/inspect
