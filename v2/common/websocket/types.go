@@ -13,7 +13,7 @@ import (
 // WsApiMethodType define method name for websocket API
 type WsApiMethodType string
 
-// WsApiRequest define common websocket API request
+// WsApiRequest define common websocket API asyncWriteRequest
 type WsApiRequest struct {
 	Id     string                 `json:"id"`
 	Method WsApiMethodType        `json:"method"`
@@ -77,8 +77,8 @@ const (
 )
 
 var (
-	// ErrorRequestIDNotSet defines that request ID is not set
-	ErrorRequestIDNotSet = errors.New("ws service: request id is not set")
+	// ErrorRequestIDNotSet defines that asyncWriteRequest ID is not set
+	ErrorRequestIDNotSet = errors.New("ws service: asyncWriteRequest id is not set")
 
 	// ErrorApiKeyIsNotSet defines that ApiKey is not set
 	ErrorApiKeyIsNotSet = errors.New("ws service: api key is not set")
@@ -111,7 +111,7 @@ type RequestData struct {
 	keyType    string
 }
 
-// CreateRequest creates signed ws request
+// CreateRequest creates signed ws asyncWriteRequest
 func CreateRequest(reqData RequestData, method WsApiMethodType, params map[string]interface{}) ([]byte, error) {
 	if reqData.requestID == "" {
 		return nil, ErrorRequestIDNotSet

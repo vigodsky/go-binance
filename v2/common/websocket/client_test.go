@@ -95,7 +95,7 @@ func (s *clientTestSuite) TestReadWriteSync() {
 				requestID := id.String()
 
 				req := testApiRequest{
-					Id:     "some-other-request-id",
+					Id:     "some-other-asyncWriteRequest-id",
 					Method: "some-method",
 					Params: map[string]interface{}{},
 				}
@@ -165,6 +165,39 @@ func (s *clientTestSuite) TestReadWriteSync() {
 				case <-ctx.Done():
 					s.T().Fatal("timeout waiting for write")
 				case responseRaw := <-client.GetReadChannel():
+					s.Require().Equal(reqRaw, responseRaw)
+				case err := <-client.GetReadErrorChannel():
+					s.T().Fatalf("unexpected error: '%v'", err)
+				}
+			},
+		},
+		{
+			name: "WriteAsync success with waiter channel",
+			testCallback: func() {
+				id, err := uuid.NewRandom()
+				s.Require().NoError(err)
+				requestID := id.String()
+
+				req := testApiRequest{
+					Id:     requestID,
+					Method: "some-method-with-waiter",
+					Params: map[string]interface{}{},
+				}
+				reqRaw, err := json.Marshal(req)
+				s.Require().NoError(err)
+
+				waiter := make(chan []byte)
+
+				err = client.Write(requestID, reqRaw, WithWaiter(waiter))
+				s.Require().NoError(err)
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				select {
+				case <-ctx.Done():
+					s.T().Fatal("timeout waiting for write")
+				case responseRaw := <-waiter:
 					s.Require().Equal(reqRaw, responseRaw)
 				case err := <-client.GetReadErrorChannel():
 					s.T().Fatalf("unexpected error: '%v'", err)
