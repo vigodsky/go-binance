@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"testing"
@@ -288,4 +289,102 @@ func startWsTestServer(stopCh chan struct{}) {
 		log.Fatalf("WebSocket shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
+}
+
+// Memory benchmark tests for channel references in RequestList
+func BenchmarkRequestList_ChannelMemory(b *testing.B) {
+	tests := []struct {
+		name        string
+		mapSize     int
+		channelType string
+	}{
+		{"SameChannel_1000entries", 1000, "same"},
+		{"SameChannel_10000entries", 10000, "same"},
+		{"DifferentChannels_1000entries", 1000, "different"},
+		{"DifferentChannels_10000entries", 10000, "different"},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			for n := 0; n < b.N; n++ {
+				requestList := NewRequestList()
+
+				if tt.channelType == "same" {
+					// Test: Multiple map entries with SAME channel reference
+					sharedChannel := make(chan []byte, 1)
+
+					for i := 0; i < tt.mapSize; i++ {
+						requestID := fmt.Sprintf("req_%d_%d", n, i)
+						requestList.Add(requestID, sharedChannel)
+					}
+
+				} else {
+					// Test: Multiple map entries with DIFFERENT channels
+					for i := 0; i < tt.mapSize; i++ {
+						requestID := fmt.Sprintf("req_%d_%d", n, i)
+						uniqueChannel := make(chan []byte, 1)
+						requestList.Add(requestID, uniqueChannel)
+					}
+				}
+
+				// Verify the map size
+				if requestList.Len() != tt.mapSize {
+					b.Fatalf("Expected %d entries, got %d", tt.mapSize, requestList.Len())
+				}
+			}
+		})
+	}
+}
+
+// Benchmark to demonstrate memory efficiency of channel references
+func BenchmarkChannelReference_vs_ChannelCopy(b *testing.B) {
+	const numEntries = 1000
+
+	b.Run("ChannelReferences", func(b *testing.B) {
+		b.ReportAllocs()
+
+		for n := 0; n < b.N; n++ {
+			// Simulate the actual RequestList behavior
+			requests := make(map[string]chan []byte, numEntries)
+			sharedChannel := make(chan []byte, 1)
+
+			for i := 0; i < numEntries; i++ {
+				requestID := fmt.Sprintf("req_%d", i)
+				requests[requestID] = sharedChannel // Store reference
+			}
+
+			// Verify all entries point to the same channel
+			firstChan := requests["req_0"]
+			for i := 1; i < numEntries; i++ {
+				requestID := fmt.Sprintf("req_%d", i)
+				if requests[requestID] != firstChan {
+					b.Fatal("Channels should be identical references")
+				}
+			}
+		}
+	})
+
+	b.Run("UniqueChannels", func(b *testing.B) {
+		b.ReportAllocs()
+
+		for n := 0; n < b.N; n++ {
+			requests := make(map[string]chan []byte, numEntries)
+
+			for i := 0; i < numEntries; i++ {
+				requestID := fmt.Sprintf("req_%d", i)
+				requests[requestID] = make(chan []byte, 1) // Create unique channel
+			}
+
+			// Verify all channels are different
+			for i := 1; i < numEntries; i++ {
+				req0 := fmt.Sprintf("req_%d", 0)
+				reqI := fmt.Sprintf("req_%d", i)
+				if requests[req0] == requests[reqI] {
+					b.Fatal("Channels should be unique")
+				}
+			}
+		}
+	})
 }
