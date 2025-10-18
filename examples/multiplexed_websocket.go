@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -11,193 +13,443 @@ import (
 	"github.com/adshao/go-binance/v2/futures"
 )
 
-// ResponseCounter tracks request/response counts
-type ResponseCounter struct {
-	TotalRequests   int64
-	TotalResponses  int64
-	PlaceRequests   int64
-	PlaceResponses  int64
-	StatusRequests  int64
-	StatusResponses int64
-	CancelRequests  int64
-	CancelResponses int64
+var (
+	logger *slog.Logger
+	ctx    context.Context
+	cancel context.CancelFunc
+)
+
+const requestsCount = 100
+
+// Stats tracks request/response statistics
+type Stats struct {
+	RequestsSent      int
+	ResponsesReceived int
+	StartTime         time.Time
+	EndTime           time.Time
+	mu                sync.Mutex
 }
 
-// RequestResponse tracks individual request/response pairs
-type RequestResponse struct {
-	UUID        string
-	RequestType string
-	Timestamp   time.Time
-	Responded   bool
+func (s *Stats) IncrementRequests() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.RequestsSent++
 }
+
+func (s *Stats) IncrementResponses() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ResponsesReceived++
+}
+
+func (s *Stats) GetCounts() (int, int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.RequestsSent, s.ResponsesReceived
+}
+
+func (s *Stats) SetStartTime() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.StartTime = time.Now()
+}
+
+func (s *Stats) SetEndTime() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.EndTime = time.Now()
+}
+
+func (s *Stats) GetDuration() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.EndTime.IsZero() {
+		return time.Since(s.StartTime)
+	}
+	return s.EndTime.Sub(s.StartTime)
+}
+
+var (
+	placeStats  = &Stats{}
+	cancelStats = &Stats{}
+)
 
 // MultiplexedFuturesWebSocketExample demonstrates concurrent WebSocket requests
-// with UUID tracking and waiter channels for 1:1 request/response matching
+// with waiter channels for 1:1 request/response matching
 func MultiplexedFuturesWebSocketExample() {
-	log.Println("=== Enhanced Multiplexed Futures WebSocket Example ===")
-	log.Println("Testing concurrent requests with UUID tracking and waiter channels")
+	// Setup structured logging
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
 
+	logger.Info("=== Enhanced Multiplexed Futures WebSocket Example ===")
+	logger.Info("Testing concurrent requests with UUID tracking and waiter channels")
+
+	// Validate configuration
 	if err := AppConfig.Validate(); err != nil {
-		log.Printf("Configuration error: %v\n", err)
+		logger.Error("Configuration error", "error", err)
 		return
 	}
 
-	// Setup testnet
+	// Setup testnet and context
 	AppConfig.SetupTestnet()
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
 
-	// Create a shared WebSocket connection and client for futures
-	conn, err := websocket.NewConnection(futures.WsApiInitReadWriteConn, futures.WebsocketKeepalive, futures.WebsocketTimeoutReadWriteConnection)
+	// Create shared WebSocket connection and client
+	sharedClient, err := createWebSocketClient()
 	if err != nil {
-		log.Printf("Failed to create WebSocket connection: %v\n", err)
+		logger.Error("Failed to create WebSocket client", "error", err)
 		return
 	}
-
-	sharedClient, err := websocket.NewClient(conn)
-	if err != nil {
-		log.Printf("Failed to create WebSocket client: %v\n", err)
-		return
-	}
-	log.Printf("Shared futures WebSocket client created successfully\n\n")
 
 	var wg sync.WaitGroup
-	wg.Add(2) // 2 reading goroutines must complete
-	go startFallbackMessages(sharedClient)
+	wg.Add(2) // 2 services will run
+
+	// Start monitoring and services
+	go startFallbackMonitoring(sharedClient)
 	go startOrderPlaceService(&wg, sharedClient)
 	go startOrderCancelService(&wg, sharedClient)
 
 	wg.Wait()
+	logger.Info("All services completed")
+
+	// Print final statistics
+	printFinalStats()
 }
 
-// startFallbackMessages start monitoring goroutine for fallback messages
-func startFallbackMessages(sharedClient websocket.Client) {
-	go func() {
-		log.Println("Monitoring shared channel for fallback messages...")
+// createWebSocketClient creates a new WebSocket client
+func createWebSocketClient() (websocket.Client, error) {
+	conn, err := websocket.NewConnection(
+		futures.WsApiInitReadWriteConn,
+		futures.WebsocketKeepalive,
+		futures.WebsocketTimeoutReadWriteConnection,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create WebSocket connection: %w", err)
+	}
 
-		for {
-			select {
-			case data := <-sharedClient.GetReadChannel():
-				log.Fatalf("FALLBACK #%s: Message received on shared channel (should be routed to waiter!)\n", string(data))
-			case err := <-sharedClient.GetReadErrorChannel():
-				if err != nil {
-					log.Fatalf("Shared channel error: %v\n", err)
-				}
+	client, err := websocket.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create WebSocket client: %w", err)
+	}
+
+	logger.Info("Shared futures WebSocket client created successfully")
+	return client, nil
+}
+
+// startFallbackMonitoring monitors the shared channel for fallback messages
+func startFallbackMonitoring(sharedClient websocket.Client) {
+	logger.Info("Starting fallback message monitoring")
+
+	for {
+		select {
+		case data := <-sharedClient.GetReadChannel():
+			logger.Error("FALLBACK: Message received on shared channel (should be routed to waiter)",
+				"data", string(data))
+		case err := <-sharedClient.GetReadErrorChannel():
+			if err != nil {
+				logger.Error("Shared channel error", "error", err)
+				return
 			}
+		case <-ctx.Done():
+			logger.Info("Fallback monitoring stopped")
+			return
 		}
-	}()
+	}
 }
 
+// startOrderPlaceService handles order placement requests
 func startOrderPlaceService(wg *sync.WaitGroup, sharedClient websocket.Client) {
-	// Create services
+	defer wg.Done()
+
+	// Create order place service
 	orderPlaceService, err := futures.NewOrderPlaceWsService(
 		AppConfig.APIKey,
 		AppConfig.SecretKey,
 		websocket.WithWebSocketClient(sharedClient),
 	)
 	if err != nil {
-		log.Printf("Failed to create order place service: %v\n", err)
+		logger.Error("Failed to create order place service", "error", err)
 		return
 	}
 
 	// Create dedicated waiter channel
-	waiterOrderPlace := make(chan []byte, 1)
+	waiterChannel := make(chan []byte, 1)
+	defer close(waiterChannel)
 
-	go func() {
-		defer wg.Done()
+	// Initialize stats
+	placeStats.SetStartTime()
 
-		for {
-			// Wait for response with timeout
-			select {
-			case data := <-waiterOrderPlace:
-				response := string(data)
-				log.Println("order.place response:", response)
+	// Send multiple requests with concurrency control
+	go sendOrderPlaceRequests(orderPlaceService, waiterChannel)
 
-				if !strings.Contains(response, "place_") {
-					// if not expected response received, exit 1
-					log.Fatalln("order place response does not contain prefix <place_>, something went wrong with routing")
-				}
+	// Start response listener
+	handleOrderPlaceResponses(waiterChannel)
+}
 
-			case <-time.After(5 * time.Second):
-				log.Println("order.place timeout")
+// handleOrderPlaceResponses handles responses from order place service
+func handleOrderPlaceResponses(waiterChannel <-chan []byte) {
+	serviceLogger := logger.With("service", "order_place")
+	timeout := time.NewTimer(30 * time.Second) // Overall timeout for all responses
+	defer timeout.Stop()
+
+	for {
+		select {
+		case data, ok := <-waiterChannel:
+			if !ok {
+				serviceLogger.Info("WaiterChannel closed")
+				placeStats.SetEndTime()
 				return
 			}
-		}
-	}()
+			response := string(data)
+			serviceLogger.Debug("Response received", "response", response)
 
-	// Build request
-	request := futures.NewOrderPlaceWsRequest().
-		Symbol("BTCUSDT"). // Use valid symbol
-		Side(futures.SideTypeBuy).
-		Type(futures.OrderTypeMarket).
-		TimeInForce(futures.TimeInForceTypeFOK).
-		Quantity("0.00001") // Small quantity for testing
-
-	const requestsCount = 100
-	// Send multiple concurrent requests with single waiter
-	for range requestsCount {
-		requestID := fmt.Sprintf("place_%d", time.Now().UnixNano())
-		go func() {
-			log.Println("order.place sending request:", requestID)
-			if err := orderPlaceService.Do(requestID, request, websocket.WithWaiter(waiterOrderPlace)); err != nil {
-				log.Fatal(err)
+			if !strings.Contains(response, "place_") {
+				serviceLogger.Error("Response does not contain expected prefix 'place_'", "response", response)
+				placeStats.SetEndTime()
+				return
 			}
-		}()
 
-		time.Sleep(100 * time.Millisecond)
+			placeStats.IncrementResponses()
+			sent, received := placeStats.GetCounts()
+			serviceLogger.Info("Progress", "responses_received", received, "requests_sent", sent)
+
+			if received >= requestsCount {
+				serviceLogger.Info("All responses received successfully", "total", received)
+				placeStats.SetEndTime()
+				return
+			}
+
+		case <-timeout.C:
+			sent, received := placeStats.GetCounts()
+			serviceLogger.Warn("Overall timeout reached",
+				"requests_sent", sent,
+				"responses_received", received,
+				"missing", sent-received)
+			placeStats.SetEndTime()
+			return
+
+		case <-ctx.Done():
+			serviceLogger.Info("Response handler stopped")
+			placeStats.SetEndTime()
+			return
+		}
 	}
 }
 
+// sendOrderPlaceRequests sends multiple order placement requests concurrently
+func sendOrderPlaceRequests(orderPlaceService *futures.OrderPlaceWsService, waiterChannel chan []byte) {
+	serviceLogger := logger.With("service", "order_place")
+
+	// Build request
+	request := futures.NewOrderPlaceWsRequest().
+		Symbol("BTCUSDT").
+		Side(futures.SideTypeBuy).
+		Type(futures.OrderTypeMarket).
+		TimeInForce(futures.TimeInForceTypeFOK).
+		Quantity("0.00001")
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 10) // Limit concurrent requests
+
+	for i := 0; i < requestsCount; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Acquire semaphore
+			defer func() { <-semaphore }() // Release semaphore
+
+			requestID := fmt.Sprintf("place_%d_%d", time.Now().UnixNano(), index)
+			serviceLogger.Debug("Sending request", "request_id", requestID, "index", index)
+
+			if err := orderPlaceService.Do(requestID, request, websocket.WithWaiter(waiterChannel)); err != nil {
+				serviceLogger.Error("Failed to send request", "error", err, "request_id", requestID)
+				return
+			}
+			placeStats.IncrementRequests()
+		}(i)
+
+		// Rate limiting
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	wg.Wait()
+	serviceLogger.Info("All order place requests sent")
+}
+
+// startOrderCancelService handles order cancellation requests
 func startOrderCancelService(wg *sync.WaitGroup, sharedClient websocket.Client) {
-	// Create services
-	orderCancelWsService, err := futures.NewOrderCancelWsService(
+	defer wg.Done()
+
+	// Create order cancel service
+	orderCancelService, err := futures.NewOrderCancelWsService(
 		AppConfig.APIKey,
 		AppConfig.SecretKey,
 		websocket.WithWebSocketClient(sharedClient),
 	)
 	if err != nil {
-		log.Printf("Failed to create order cancel service: %v\n", err)
+		logger.Error("Failed to create order cancel service", "error", err)
 		return
 	}
 
 	// Create dedicated waiter channel
-	waiterOrderCancel := make(chan []byte, 1)
-	go func() {
-		defer wg.Done()
+	waiterChannel := make(chan []byte, 1)
+	defer close(waiterChannel)
 
-		for {
-			// Wait for response with timeout
-			select {
-			case data := <-waiterOrderCancel:
-				response := string(data)
-				log.Println("order.cancel response:", response)
+	// Initialize stats
+	cancelStats.SetStartTime()
 
-				if !strings.Contains(response, "cancel_") {
-					// if not expected response received, exit 1
-					log.Fatalln("order cancel response does not contain prefix <cancel_>, something went wrong with routing")
-				}
+	// Send multiple requests with concurrency control
+	go sendOrderCancelRequests(orderCancelService, waiterChannel)
 
-			case <-time.After(5 * time.Second):
-				log.Println("order.cancel timeout")
+	// Start response listener
+	handleOrderCancelResponses(waiterChannel)
+}
+
+// handleOrderCancelResponses handles responses from order cancel service
+func handleOrderCancelResponses(waiterChannel <-chan []byte) {
+	serviceLogger := logger.With("service", "order_cancel")
+	timeout := time.NewTimer(30 * time.Second) // Overall timeout for all responses
+	defer timeout.Stop()
+
+	for {
+		select {
+		case data, ok := <-waiterChannel:
+			if !ok {
+				serviceLogger.Info("WaiterChannel closed")
+				cancelStats.SetEndTime()
 				return
 			}
+			response := string(data)
+			serviceLogger.Debug("Response received", "response", response)
+
+			if !strings.Contains(response, "cancel_") {
+				serviceLogger.Error("Response does not contain expected prefix 'cancel_'", "response", response)
+				cancelStats.SetEndTime()
+				return
+			}
+
+			cancelStats.IncrementResponses()
+			sent, received := cancelStats.GetCounts()
+			serviceLogger.Info("Progress", "responses_received", received, "requests_sent", sent)
+
+			if received >= requestsCount {
+				serviceLogger.Info("All responses received successfully", "total", received)
+				cancelStats.SetEndTime()
+				return
+			}
+
+		case <-timeout.C:
+			sent, received := cancelStats.GetCounts()
+			serviceLogger.Warn("Overall timeout reached",
+				"requests_sent", sent,
+				"responses_received", received,
+				"missing", sent-received)
+			cancelStats.SetEndTime()
+			return
+
+		case <-ctx.Done():
+			serviceLogger.Info("Response handler stopped")
+			cancelStats.SetEndTime()
+			return
 		}
-	}()
+	}
+}
+
+// sendOrderCancelRequests sends multiple order cancellation requests concurrently
+func sendOrderCancelRequests(orderCancelService *futures.OrderCancelWsService, waiterChannel chan []byte) {
+	serviceLogger := logger.With("service", "order_cancel")
 
 	// Build request
 	request := futures.NewOrderCancelRequest().
 		Symbol("BTCUSDT").
-		OrderID(123123) // not existing order for testing
+		OrderID(123123) // Non-existing order for testing
 
-	const requestsCount = 100
-	// Send multiple concurrent requests with single waiter
-	for range requestsCount {
-		requestID := fmt.Sprintf("cancel_%d", time.Now().UnixNano())
-		go func() {
-			log.Println("order.cancel sending request:", requestID)
-			if err := orderCancelWsService.Do(requestID, request, websocket.WithWaiter(waiterOrderCancel)); err != nil {
-				log.Fatal(err)
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, 10) // Limit concurrent requests
+
+	for i := 0; i < requestsCount; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Acquire semaphore
+			defer func() { <-semaphore }() // Release semaphore
+
+			requestID := fmt.Sprintf("cancel_%d_%d", time.Now().UnixNano(), index)
+			serviceLogger.Debug("Sending request", "request_id", requestID, "index", index)
+
+			if err := orderCancelService.Do(requestID, request, websocket.WithWaiter(waiterChannel)); err != nil {
+				serviceLogger.Error("Failed to send request", "error", err, "request_id", requestID)
+				return
 			}
-		}()
+			cancelStats.IncrementRequests()
+		}(i)
 
+		// Rate limiting
 		time.Sleep(100 * time.Millisecond)
+	}
+
+	wg.Wait()
+	serviceLogger.Info("All order cancel requests sent")
+}
+
+// printFinalStats prints comprehensive statistics for both services
+func printFinalStats() {
+	logger.Info("=== FINAL STATISTICS ===")
+
+	// Place stats
+	placeSent, placeReceived := placeStats.GetCounts()
+	placeDuration := placeStats.GetDuration()
+	placeSuccess := placeSent == placeReceived && placeSent == requestsCount
+
+	logger.Info("Order Place Service Statistics",
+		"requests_sent", placeSent,
+		"responses_received", placeReceived,
+		"expected", requestsCount,
+		"missing", placeSent-placeReceived,
+		"success", placeSuccess,
+		"duration", placeDuration,
+		"avg_response_time", placeDuration/time.Duration(max(1, placeReceived)),
+	)
+
+	// Cancel stats
+	cancelSent, cancelReceived := cancelStats.GetCounts()
+	cancelDuration := cancelStats.GetDuration()
+	cancelSuccess := cancelSent == cancelReceived && cancelSent == requestsCount
+
+	logger.Info("Order Cancel Service Statistics",
+		"requests_sent", cancelSent,
+		"responses_received", cancelReceived,
+		"expected", requestsCount,
+		"missing", cancelSent-cancelReceived,
+		"success", cancelSuccess,
+		"duration", cancelDuration,
+		"avg_response_time", cancelDuration/time.Duration(max(1, cancelReceived)),
+	)
+
+	// Overall stats
+	totalSent := placeSent + cancelSent
+	totalReceived := placeReceived + cancelReceived
+	totalExpected := requestsCount * 2
+	overallSuccess := totalSent == totalReceived && totalSent == totalExpected
+
+	logger.Info("Overall Statistics",
+		"total_requests_sent", totalSent,
+		"total_responses_received", totalReceived,
+		"total_expected", totalExpected,
+		"total_missing", totalSent-totalReceived,
+		"overall_success", overallSuccess,
+		"success_rate", fmt.Sprintf("%.2f%%", float64(totalReceived)/float64(totalSent)*100),
+	)
+
+	if !overallSuccess {
+		logger.Error("VERIFICATION FAILED: Request/Response counts do not match!",
+			"sent", totalSent,
+			"received", totalReceived,
+			"expected", totalExpected,
+		)
+	} else {
+		logger.Info("✅ VERIFICATION PASSED: All requests received responses!")
 	}
 }
