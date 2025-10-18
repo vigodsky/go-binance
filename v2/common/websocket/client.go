@@ -29,8 +29,8 @@ var (
 	// ErrorWsReadConnectionTimeout defines that connection read timeout expired
 	ErrorWsReadConnectionTimeout = errors.New("ws error: read connection timeout")
 
-	// ErrorWsIdAlreadySent defines that asyncWriteRequest with the same id was already sent
-	ErrorWsIdAlreadySent = errors.New("ws error: asyncWriteRequest with same id already sent")
+	// ErrorWsIdAlreadySent defines that request with the same id was already sent
+	ErrorWsIdAlreadySent = errors.New("ws error: request with same id already sent")
 
 	// KeepAlivePingDeadline defines deadline to send ping frame
 	KeepAlivePingDeadline = 10 * time.Second
@@ -39,7 +39,7 @@ var (
 	WaitCheckInternal = 300 * time.Millisecond
 )
 
-// messageId define id field of asyncWriteRequest/response
+// messageId define id field of request/response
 type messageId struct {
 	Id string `json:"id"`
 }
@@ -87,16 +87,16 @@ func NewClient(conn Connection) (Client, error) {
 	return client, nil
 }
 
-type asyncWriteRequest struct {
+type request struct {
 	waiter chan []byte
 }
 
-// RequestOption define option type for asyncWriteRequest
-type RequestOption func(*asyncWriteRequest)
+// RequestOption define option type for request
+type RequestOption func(*request)
 
-// WithWaiter set waiter channel param for the asyncWriteRequest
+// WithWaiter set waiter channel param for the request
 func WithWaiter(waiter chan []byte) RequestOption {
-	return func(r *asyncWriteRequest) {
+	return func(r *request) {
 		r.waiter = waiter
 	}
 }
@@ -120,7 +120,7 @@ func (c *client) Write(id string, data []byte, opts ...RequestOption) error {
 		return ErrorWsIdAlreadySent
 	}
 
-	req := &asyncWriteRequest{}
+	req := &request{}
 	for _, opt := range opts {
 		opt(req)
 	}
@@ -230,7 +230,7 @@ func (c *client) read() {
 			c.readC <- message
 		}
 
-		c.debug("read: remove message from asyncWriteRequest list '%v'", msg)
+		c.debug("read: remove message from request list '%v'", msg)
 		c.requestsList.Remove(msg.Id)
 	}
 }
@@ -302,7 +302,7 @@ func (c *client) GetReconnectCount() int64 {
 	return atomic.LoadInt64(&c.reconnectCount)
 }
 
-// NewRequestList creates asyncWriteRequest list
+// NewRequestList creates request list
 func NewRequestList() RequestList {
 	return RequestList{
 		mu:       sync.Mutex{},
@@ -316,7 +316,7 @@ type RequestList struct {
 	requests map[string]chan []byte
 }
 
-// Add adds asyncWriteRequest into list
+// Add adds request into list
 func (l *RequestList) Add(id string, waiterChan chan []byte) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -329,14 +329,14 @@ func (l *RequestList) Get(id string) chan []byte {
 	return l.requests[id]
 }
 
-// RecreateList creates new asyncWriteRequest list
+// RecreateList creates new request list
 func (l *RequestList) RecreateList() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.requests = make(map[string]chan []byte)
 }
 
-// Remove adds asyncWriteRequest from list
+// Remove adds request from list
 func (l *RequestList) Remove(id string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

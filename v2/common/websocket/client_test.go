@@ -96,7 +96,7 @@ func (s *clientTestSuite) TestReadWriteSync() {
 				requestID := id.String()
 
 				req := testApiRequest{
-					Id:     "some-other-asyncWriteRequest-id",
+					Id:     "some-other-request-id",
 					Method: "some-method",
 					Params: map[string]interface{}{},
 				}
