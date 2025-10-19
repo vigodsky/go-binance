@@ -310,7 +310,7 @@ func NewRequestList() RequestList {
 	}
 }
 
-// RequestList state of waiters that was sent/received with or without waiter channel
+// RequestList state of requests that was sent/received with or without waiter channel
 type RequestList struct {
 	mu       sync.Mutex
 	requests map[string]chan []byte
