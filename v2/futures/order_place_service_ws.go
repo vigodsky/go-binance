@@ -31,18 +31,17 @@ func NewOrderPlaceWsService(apiKey, secretKey string, opts ...websocket.WebSocke
 
 	if createOpts.Client != nil {
 		service.c = createOpts.Client
-		return service, nil
+	} else {
+		conn, err := websocket.NewConnection(WsApiInitReadWriteConn, WebsocketKeepalive, WebsocketTimeoutReadWriteConnection)
+		if err != nil {
+			return nil, err
+		}
+		client, err := websocket.NewClient(conn)
+		if err != nil {
+			return nil, err
+		}
+		service.c = client
 	}
-
-	conn, err := websocket.NewConnection(WsApiInitReadWriteConn, WebsocketKeepalive, WebsocketTimeoutReadWriteConnection)
-	if err != nil {
-		return nil, err
-	}
-	client, err := websocket.NewClient(conn)
-	if err != nil {
-		return nil, err
-	}
-	service.c = client
 
 	return service, nil
 }
