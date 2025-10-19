@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -32,18 +33,42 @@ type clientTestSuite struct {
 	secretKey string
 }
 
+// findAvailablePort finds and returns an available port on localhost
+func findAvailablePort() (int, error) {
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return 0, fmt.Errorf("failed to find available port: %w", err)
+	}
+	defer listener.Close()
+
+	addr := listener.Addr().(*net.TCPAddr)
+	return addr.Port, nil
+}
+
+// createTestWebSocketURL creates a websocket URL for the given port
+func createTestWebSocketURL(port int) string {
+	return fmt.Sprintf("ws://localhost:%d/ws", port)
+}
+
 func TestClient(t *testing.T) {
 	suite.Run(t, new(clientTestSuite))
 }
 
 func (s *clientTestSuite) TestReadWriteSync() {
+	// Find an available port
+	port, err := findAvailablePort()
+	s.Require().NoError(err)
+
 	stopCh := make(chan struct{})
 	go func() {
-		startWsTestServer(stopCh)
+		startWsTestServer(port, stopCh)
 	}()
 	defer func() {
 		stopCh <- struct{}{}
 	}()
+
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
 
 	conn, err := NewConnection(func() (*websocket.Conn, error) {
 		Dialer := websocket.Dialer{
@@ -52,7 +77,8 @@ func (s *clientTestSuite) TestReadWriteSync() {
 			EnableCompression: false,
 		}
 
-		c, _, err := Dialer.Dial("ws://localhost:8080/ws", nil)
+		wsURL := createTestWebSocketURL(port)
+		c, _, err := Dialer.Dial(wsURL, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -265,13 +291,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startWsTestServer(stopCh chan struct{}) {
+func startWsTestServer(port int, stopCh chan struct{}) {
+	addr := fmt.Sprintf("localhost:%d", port)
 	server := &http.Server{
-		Addr: "localhost:8080",
+		Addr: addr,
 	}
 
 	http.HandleFunc("/ws", wsHandler)
-	log.Println("WebSocket server started on :8080")
+	log.Printf("WebSocket server started on :%d", port)
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
