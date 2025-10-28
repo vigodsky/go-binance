@@ -87,7 +87,7 @@ var wsServe = func(cfg *WsConfig, handler WsHandler, errHandler ErrHandler) (don
 func keepAlive(c *websocket.Conn, timeout time.Duration) {
 	ticker := time.NewTicker(timeout)
 
-	var lastResponse int64 = time.Now().UnixNano()
+	lastResponse := time.Now().UnixNano()
 
 	c.SetPingHandler(func(pingData string) error {
 		// Respond with Pong using the server's PING payload
